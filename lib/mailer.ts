@@ -3,17 +3,36 @@ import type { StoreConfig } from "@/config/store";
 import { requireEnv } from "@/lib/env";
 import type { NormalizedOrder } from "@/types/order";
 
+function envTimeoutMs(name: string, fallbackMs: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) {
+    return fallbackMs;
+  }
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallbackMs;
+  }
+  return parsed;
+}
+
 function makeTransporter() {
   const host = requireEnv("SMTP_HOST");
+  const hostIp = process.env.SMTP_HOST_IP?.trim();
   const port = Number(requireEnv("SMTP_PORT"));
   const user = requireEnv("SMTP_USER");
   const pass = requireEnv("SMTP_PASS");
+  const transportHost = hostIp || host;
 
   return nodemailer.createTransport({
-    host,
+    host: transportHost,
     port,
     secure: port === 465,
-    auth: { user, pass }
+    auth: { user, pass },
+    connectionTimeout: envTimeoutMs("SMTP_CONNECTION_TIMEOUT_MS", 10000),
+    greetingTimeout: envTimeoutMs("SMTP_GREETING_TIMEOUT_MS", 10000),
+    socketTimeout: envTimeoutMs("SMTP_SOCKET_TIMEOUT_MS", 15000),
+    dnsTimeout: envTimeoutMs("SMTP_DNS_TIMEOUT_MS", 8000),
+    tls: hostIp ? { servername: host } : undefined
   });
 }
 

@@ -63,6 +63,10 @@ export interface SubmitResult {
   customerEmailSent: boolean;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 export async function submitOrder(
   payload: unknown,
   clientIp: string | null,
@@ -115,20 +119,35 @@ export async function submitOrder(
     createdAtIso: new Date().toISOString()
   };
 
+  const sheetsEnabled = shouldAppendOrderToSheet();
+  let customerEmailSent = false;
+
   try {
     await deps.sendStoreOrderEmail(order, storeConfig);
-    if (shouldAppendOrderToSheet()) {
-      await deps.appendOrderToSheet(order);
-    }
-    const customerEmailSent = await deps.sendCustomerConfirmationEmail(order, storeConfig);
-    return {
-      ok: true,
-      orderRef: order.orderRef,
-      customerEmailSent
-    };
   } catch (error) {
-    throw new OrderProcessingError(
-      `Order processing failed: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
+    throw new OrderProcessingError(`Order processing failed: Store email: ${errorMessage(error)}`);
   }
+
+  if (sheetsEnabled) {
+    try {
+      await deps.appendOrderToSheet(order);
+    } catch (error) {
+      throw new OrderProcessingError(`Order processing failed: Google Sheets: ${errorMessage(error)}`);
+    }
+  }
+
+  try {
+    customerEmailSent = await deps.sendCustomerConfirmationEmail(order, storeConfig);
+  } catch (error) {
+    console.error("Customer confirmation email failed", {
+      orderRef: order.orderRef,
+      error: errorMessage(error)
+    });
+  }
+
+  return {
+    ok: true,
+    orderRef: order.orderRef,
+    customerEmailSent
+  };
 }

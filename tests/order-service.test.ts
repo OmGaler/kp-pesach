@@ -69,17 +69,51 @@ describe("submitOrder", () => {
     ).rejects.toBeInstanceOf(OrderValidationError);
   });
 
-  test("surfaces processing failures", async () => {
+  test("surfaces processing failures when store email fails", async () => {
     const sendStoreOrderEmail = vi.fn().mockRejectedValue(new Error("smtp down"));
+    const appendOrderToSheet = vi.fn().mockResolvedValue(undefined);
+
+    await expect(
+      submitOrder(basePayload, "3.3.3.3", {
+        getCatalog: () => catalog,
+        sendStoreOrderEmail,
+        sendCustomerConfirmationEmail: vi.fn().mockResolvedValue(true),
+        appendOrderToSheet
+      })
+    ).rejects.toBeInstanceOf(OrderProcessingError);
+
+    expect(appendOrderToSheet).toHaveBeenCalledTimes(0);
+    expect(sendStoreOrderEmail).toHaveBeenCalledTimes(1);
+  });
+
+  test("fails when both store email and sheets fail", async () => {
+    const sendStoreOrderEmail = vi.fn().mockRejectedValue(new Error("smtp down"));
+    const appendOrderToSheet = vi.fn().mockRejectedValue(new Error("sheets down"));
 
     await expect(
       submitOrder(basePayload, "3.3.3.3", {
         getCatalog: () => catalog,
         sendStoreOrderEmail,
         sendCustomerConfirmationEmail: vi.fn(),
-        appendOrderToSheet: vi.fn()
+        appendOrderToSheet
       })
     ).rejects.toBeInstanceOf(OrderProcessingError);
+  });
+
+  test("does not fail order when customer confirmation email fails", async () => {
+    const sendStoreOrderEmail = vi.fn().mockResolvedValue(undefined);
+    const sendCustomerConfirmationEmail = vi.fn().mockRejectedValue(new Error("customer smtp down"));
+    const appendOrderToSheet = vi.fn().mockResolvedValue(undefined);
+
+    const result = await submitOrder(basePayload, "6.6.6.6", {
+      getCatalog: () => catalog,
+      sendStoreOrderEmail,
+      sendCustomerConfirmationEmail,
+      appendOrderToSheet
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.customerEmailSent).toBe(false);
   });
 
   test("skips sheets append when SKIP_GOOGLE_SHEETS is enabled", async () => {
@@ -109,4 +143,5 @@ describe("submitOrder", () => {
       }
     }
   });
+
 });
