@@ -21,6 +21,7 @@ body {
   background: radial-gradient(circle at top right, #f8dde3 0%, var(--bg) 42%);
   color: var(--text);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: clip;
 }
 
 .page-shell {
@@ -253,6 +254,9 @@ button {
   border-radius: 12px;
   padding: 0.35rem 0.4rem;
   background: #fff;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .search-bar:focus-within {
@@ -261,10 +265,13 @@ button {
 }
 
 .search-bar .search-input {
+  flex: 1 1 auto;
+  width: auto;
   border: none;
   background: transparent;
   padding: 0.45rem 0.5rem;
   min-height: 0;
+  min-width: 0;
 }
 
 .search-bar .search-input:focus {
@@ -409,7 +416,7 @@ button {
   height: 1rem;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .page-shell {
     padding: 0.75rem 0.75rem calc(6.75rem + env(safe-area-inset-bottom, 0px));
   }
@@ -454,6 +461,16 @@ button {
 
   .products-panel {
     order: 2;
+    overflow-x: clip;
+  }
+
+  .search-actions {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .search-actions .btn-secondary {
+    width: 100%;
   }
 
   .details-sidebar {

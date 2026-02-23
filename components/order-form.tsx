@@ -202,7 +202,7 @@ export function OrderForm({ catalog, storeConfig }: OrderFormProps) {
   );
 
   useEffect(() => {
-    const desktopMediaQuery = window.matchMedia("(max-width: 900px)");
+    const desktopMediaQuery = window.matchMedia("(max-width: 1024px)");
     let lastScrollY = window.scrollY;
     let frameId: number | null = null;
 
